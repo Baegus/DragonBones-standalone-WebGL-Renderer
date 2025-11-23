@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>DragonBones WebGL</title>
+	<meta charset="utf-8">
+	<style>
+		body {
+			margin: 0;
+			background: #333;
+		}
+
+		canvas {
+			display: block;
+			margin: 0 auto;
+			background: #555;
+		}
+	</style>
+</head>
+
+<body>
+	<canvas id="gameCanvas"></canvas>
+
+	<script src="dragonBonesRuntime/dragonBones.min.js"></script>
+	<script src="dragonBonesWebGLRenderer.js"></script>
+
+	<script type="module">
+		const canvas = document.getElementById("gameCanvas");
+		const canvasWidth = canvas.getAttribute("width") || window.innerWidth;
+		const canvasHeight = canvas.getAttribute("height") || window.innerHeight;
+
+		// Handle High-DPI (Retina) displays
+		const dpr = window.devicePixelRatio || 1;
+		// Set internal buffer size to match screen pixels
+		canvas.width = canvasWidth * dpr;
+		canvas.height = canvasHeight * dpr;
+		// Reset CSS size to logical pixels
+		canvas.style.width = `${canvasWidth}px`;
+		canvas.style.height = `${canvasHeight}px`;
+
+		const testArmatures = {
+			sheep: {
+				directoryPath: "assets/Sheep_Anim",
+				skeletonFile: "Sheep_Anim_ske.json",
+				textureAtlasFile: "Sheep_Anim_tex.json",
+				textureImageFile: "Sheep_Anim_tex.png",
+				defaultArmatureName: "Armature",
+				defaultAnimationName: "goat_walk_anim",
+			},
+			rooster: {
+				directoryPath: "assets/Rooster_Anim",
+				skeletonFile: "rooster_ske.json",
+				textureAtlasFile: "rooster_tex.json",
+				textureImageFile: "rooster_tex.png",
+				defaultArmatureName: "armatureName",
+				defaultAnimationName: "rooster_idle_anim",
+			},
+			mecha: {
+				directoryPath: "assets/mecha_1002_101d_show",
+				skeletonFile: "mecha_1002_101d_show_ske.dbbin",
+				textureAtlasFile: "mecha_1002_101d_show_tex.json",
+				textureImageFile: "mecha_1002_101d_show_tex.png",
+				defaultArmatureName: "mecha_1002_101d",
+				defaultAnimationName: "idle",
+			},
+		};
+
+
+		const renderer = new DragonBonesWebGL.Renderer(canvas);
+		const factory = new DragonBonesWebGL.Factory(renderer);
+		
+		const testObjects = {
+			rooster: {
+				x: 450,
+				y: 350,
+				scale: 0.5,
+			},
+			mecha: {
+				x: 750,
+				y: 400,
+				scale: 0.3,
+			},
+			sheep: {
+				x: 150,
+				y: 400,
+				scale: 0.4,
+			},
+		};
+		const armatureDisplays = [];
+		for (const key in testObjects) {
+			const item = testObjects[key];
+			item.armature = await DragonBonesWebGL.loadArmature(factory, testArmatures[key]);
+			item.display = item.armature.display;
+			item.display.x = item.x;
+			item.display.y = item.y;
+			item.display.scale = item.scale;
+			item.armature.animation.play(item.armature.defaultAnimationName);
+			armatureDisplays.push(item.display);
+		}
+
+		const maxFPS = 60;
+		const frameDuration = 1000 / maxFPS;
+		let lastUpdateTime = performance.now();
+		let lastRenderTime = lastUpdateTime;
+		
+		function tick(now) {
+			requestAnimationFrame(tick);
+			const updateElapsed = now - lastUpdateTime;
+			if (updateElapsed > 0) {
+				const dt = Math.min(updateElapsed * 0.001, 0.1);
+				factory.dragonBones.advanceTime(dt);
+				lastUpdateTime = now;
+			}
+			const renderElapsed = now - lastRenderTime;
+			if (renderElapsed >= frameDuration) {
+				lastRenderTime = now - (renderElapsed % frameDuration);
+				renderer.begin();
+				for (const display of armatureDisplays) display.render(renderer);
+				renderer.flush();
+			}
+		}
+		requestAnimationFrame(tick);
+	</script>
+</body>
+
+</html>
